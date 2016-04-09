@@ -36,8 +36,7 @@ lognormmu <- 3.5
 
 y <- c(14,
        25, 45, 25, 30, 33, 19, 50, 34 , 67)
-n <- length(y)
-tausquared <- sum((log(y) - lognormmu)^2) / length(y)
+
 gini <- function(sigma){
   return( 2*pnorm(sigma / sqrt(2)) - 1)
 }
@@ -59,10 +58,28 @@ for( i in 1:length(sigmavals)){
 plot(sigmavals,lognormpostvals,
      main = "Posterior dist for sigmas given non-informative prior",
      ylab = "prop. to posterior prob dist. of sigma")
-#lognormposteriorsigmas <- r
-x <- seq(0,1,0.001)
-plot(x,dinvchisq(x,df = n, scale = tausquared),type ="l",
-     main = "scaled inverse chi-squared distribution")
+
+invChidensity <- function(x,y,konstant = 1){
+  n <- length(y)
+  tausquared <- sum((log(y) - 3.5)^2) / n
+  res <- konstant * x ^ (-2 * ( n / 2 + 1)) * exp( -1/(2 * x^2) * n * tausquared)
+  return(res)
+}
+
+x <- seq(0,1,0.000025)
+x <- x[-1]
+maxval <- max(invChidensity(x,y,konstant = 1), na.rm = TRUE)
+plot(x,invChidensity(x,y,konstant = 1/maxval),type ="l",
+     main = "inverse chi-squared distribution of sigma squared")
+randvals <- runif(40000)
+pickvals <-c()
+for(i in 1:40000){
+  if(randvals[i] < invChidensity(x[i],y,konstant = 1/maxval)){
+   pickvals <- c(pickvals,x[i]) 
+  }
+}
+hist(pickvals, breaks = 50,main = "Draws from the posterior inverse chi-squared distr.")
+hist(gini(sqrt(pickvals)),breaks = 50, main = "Posterior Gini coef. distr.")
 
 #3
 radianobs <- c(-2.44,2.14,2.54,1.83,2.02,2.33,-2.79,2.23,2.07,2.02)
@@ -98,7 +115,8 @@ diseasedata <- cbind(diseasedata,cases = c(2,5,3,5,3,1))
 beta <- seq(1,5,0.1) + 0.001
 #gammanums <- rgamma(10000, 4*beta, beta)
 
-plot(beta,pgamma(5,4*beta, beta) - pgamma(3,4*beta, beta),main = "Search for beta",ylab="P(3<lambda<5)")
+plot(beta,pgamma(5,4*beta, beta) - pgamma(3,4*beta, beta),
+     main = "Search for beta",ylab="P(3<lambda<5)")
 abline(h = 0.5,col ="red")
 paste("optimal beta value:",beta[9] - 0.001)
 
@@ -110,4 +128,5 @@ newshape <- 1.8 * 4 + sum(diseasedata$cases)
 newrate <- 1.8 + sum(diseasedata$pop) / 100000
 lines(x, dgamma(x,newshape,newrate), col = "red")
 legend("topright",legend = c("Prior","Posterior"),lty = c(1,1), col =c("black","red"))
-paste("posterior probability lambda between 3 and 5:",signif(pgamma(5,newshape,newrate) - pgamma(3,newshape,newrate),3))
+paste("posterior probability lambda between 3 and 5:",
+      signif(pgamma(5,newshape,newrate) - pgamma(3,newshape,newrate),3))
