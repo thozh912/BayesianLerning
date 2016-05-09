@@ -21,7 +21,7 @@ ssquared <- var(raindata[,1])
 
 tausquared_0 <- 300
 mu_0 <- 300
-nu_0 <- 2000
+nu_0 <- 4
 sigmasquared_0 <- 40
 
 j <- 2
