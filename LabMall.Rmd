@@ -1,0 +1,61 @@
+---
+title: "Computer Lab 4"
+author: "Thomas Zhang"
+date: "2016 M02 1"
+output: pdf_document
+---
+
+## Assignment 1
+
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+
+```
+
+
+```{r,echo=FALSE}
+
+```
+
+ 
+
+```{r,echo=FALSE}
+
+```
+
+## Assignment 2
+
+
+```{r,echo=FALSE}
+
+```
+
+
+
+```{r,echo=FALSE}
+
+```
+
+
+
+```{r,echo=FALSE}
+
+```
+
+
+
+```{r,echo=FALSE}
+
+```
+
+
+
+```{r,echo=FALSE}
+
+```
+
+
+##Appendix
+
+###R code
+```{r code=readLines(knitr::purl("C:/Users/Dator/Documents/R_HW/CompStats/Lab2.Rmd", documentation = 0)), eval = FALSE}

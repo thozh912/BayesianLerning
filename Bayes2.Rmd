@@ -1,0 +1,224 @@
+---
+title: "Computer Lab 2"
+author: "Andrea Bruzzone,Thomas Zhang"
+date: "2016-04-20"
+output: 
+  pdf_document: 
+    fig_height: 5.5
+---
+
+## Assignment 1
+
+The multinomial model is:
+
+$p(y_{i}|\theta_{i}) \propto \prod_{k=1}^{K} \theta_{ik}^{y_{ik}}$
+
+The prior is:
+
+$p(\theta_{i}) \propto \prod_{k=1}^{K} \theta_{ik}^{\alpha_{k} - 1}$
+
+So the posterior is the product of the liklihood and the prior, so the posterior is:
+
+$p(\theta_{i} | y_{i}) \propto \prod_{k=1}^{K} \theta_{ik}^{y_{ik}} \prod_{k=1}^{K} \theta_{ik}^{\alpha_{k} - 1} = \prod_{k=1}^{K} \theta_{ik}^{(\alpha_{k} + y_{ik}) -1}$
+
+Or in other words, the posterior is $Dirichlet(\alpha_{1} + y_{i1},\ldots \alpha_{k} + y_{ik})$-distributed.
+
+
+We show the posterior means and two standard deviation error bars for $\theta_{ik}$, the probability that a voter in age group $i$ votes for party $k$, in the plots below. 1000 draws were simulated.
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE,fig.height=6,fig.width=5}
+library(gtools)
+library(plotrix)
+library(emdbook)
+votredat <- matrix( c(208, 45, 46, 35, 110, 189, 34, 53, 88, 808,
+                       403, 58, 74, 42, 146, 413, 127, 93, 57, 1413,
+                       370, 51, 60, 47, 67, 401, 59, 61, 15, 1131,
+                      383, 89, 86, 65, 45, 567, 74, 79, 17, 1405,
+                       1364, 243, 266, 189, 368, 1570, 294, 286, 177, 4757),
+                      nrow = 5, byrow = TRUE)
+row.names(votredat) <- c("18-29","30-49","50-64","65+","Total")
+colnames(votredat) <- c("M", "C", "FP", "KD", "MP", "S", "V", "SD", "Others", "Total")
+votedata <- as.data.frame(votredat)
+prioralphas <- c( 30, 6, 7, 6, 7, 30, 6, 6, 2)
+j <- 1
+thetavalues <- array(0, dim= c(4,9,1000))
+while(j < 1001){
+  for(i in 1:4){
+    thetavalues[i,,j] <- rdirichlet(1,alpha = prioralphas + as.numeric(votedata[i,1:9]))
+  }
+  j <- j + 1
+}
+themean <- matrix(0,nrow = 4, ncol = 9)
+thesd <- matrix(0,nrow = 4, ncol = 9)
+for(i in 1:4){
+  for(k in 1:9){
+    themean[i,k] <- mean(thetavalues[i,k,])
+    thesd[i,k] <- sd(thetavalues[i,k,])
+  }
+}
+par(mfrow = c(2,2))
+for( i in 1:4){
+  plotCI(1:9,themean[i,],ui = themean[i,] + 2 *thesd[i,], li = themean[i,] - 2 *thesd[i,],
+         xlab = "Political party #", ylab = "vote probability",
+         main = c("posterior vote probabilities",paste("age group",i)))
+}
+```
+
+We see that the youngest age group have a propensity to vote for party 5 (Miljöpartiet) and party 9 (Others) while the second youngest group vote more than average for party 5 and party 7 (Vänsterpartiet). The oldest age group tends to vote for party 6 (Socialdemokraterna) more than any other age group.
+
+We determine given these 1000 posterior draws of $\theta_{ik}$ the probability that, in each of the four different age groups, the Red-Green bloc will win over the Alliance bloc in a general election.
+
+```{r,echo=FALSE}
+counter <- rep(0,4)
+for(i in 1:4){
+  for(j in 1:1000){
+    if( sum(thetavalues[i,1:4,j]) < sum(thetavalues[i,5:7,j]) ){
+      counter[i] <- counter[i] + 1
+    }
+    
+  }
+}
+counter <- counter / 1000
+paste("Posterior probability of Red-Greens winning in age group",1,"is",counter[1],"percent")
+paste("Posterior probability of Red-Greens winning in age group",2,"is",counter[2],"percent")
+paste("Posterior probability of Red-Greens winning in age group",3,"is",counter[3],"percent")
+paste("Posterior probability of Red-Greens winning in age group",4,"is",counter[4],"percent")
+```
+
+Finally, we wish to find the probability that the Red-green bloc will win over the Alliance bloc in a general election. We first find the likely number of eligible voters $Y_{i}$ in each age group $i$ using the given multinomial distribution, and then we draw $\theta_{ik}$ from the posterior distribution and then we count the votes across all age groups. 1000 repetitions of this procedure were used.   
+
+```{r,echo=FALSE}
+counter <- 0
+for(k in 1:1000){
+  Yais <- rmultinom(1,6300000, prob = c(0.2, 0.3, 0.3, 0.2))
+  thetaais <- matrix(0,4,9)
+  actualvotes <- matrix(0,4,9)
+  for( i in 1:4){
+    thetaais[i,] <- rdirichlet(1,alpha = prioralphas + as.numeric(votedata[i,1:9]))
+  }
+  
+  for( i in 1:4){
+    actualvotes[i,] <- rmultinom(1,Yais[i],prob = thetaais[i,])
+  }
+  
+  allagevotes <- colSums(actualvotes)
+  if(sum(allagevotes[1:4]) < sum(allagevotes[5:7])){
+    counter <- counter + 1
+  }
+}
+paste("posterior probability of red-green election win:",counter / 1000)
+```
+
+Since we now know that the red-green bloc did indeed beat the alliance bloc in the 2014 general election, we are happy to have found this result from the posterior probability.
+
+## Assignment 2
+
+We load data from `JapanTemp.dat` and try to fit the data using a quadratic regression model using the `lm()` function. 
+
+```{r,echo=FALSE}
+par(mfrow = c(1,1))
+Japandata <- read.delim("JapanTemp.dat", header = TRUE, sep = "",stringsAsFactors = FALSE)
+
+plot(Japandata$time, Japandata$temp, xlab = "Time",
+     ylab = "Temp", main = "Regression curve using lm function")
+lines(Japandata$time,predict(lm(temp ~ time + I(time^2) , data = Japandata)))
+#sd(Japandata$temp - predict(lm(temp ~ time + I(time^2) , data = Japandata)))
+#its about 2.17
+```
+
+We see that the data is a little noisy, and we calculate the standard deviation of the difference between the curve and the data. it is around 2.17.
+
+we now try to find hyperparameters $\beta_0$,$\Omega_0$, $\nu_0$ and $s^2_0$ and $\lambda$ for the conjugate prior of a linear regression model. These hyperparameters should 1: simulate the data noise correctly and 2: Create reasonable regression curves during draws.
+
+We started with trying to find values of $\nu_0$ and $s^2_0$ which give us a $\sigma^2$ around 4-5. After some trial and error, we decided upon $\nu_0 = 50$ and $s^2_0 = 25$. We further set $\Omega_0 = I_{3}$ and $\lambda = 2$. The $\beta_0$ we get from the `lm()` quadratic model, where $\beta_0 = (11.58, 57.83, -50.82)$.
+
+We simulate draws from the joint prior of all parameters and for every draw we compute the regression curve and we plot it together with the data points.
+
+```{r,echo=FALSE, warning=FALSE, message=FALSE}
+library(MASS)
+
+thet <- matrix(ncol = 3, nrow = 100)
+for(i in 1:100){
+  X <- rchisq(1, 50)
+  sigsquare <- 50 * 25 / X
+  thet[i, ] <- mvrnorm(1, c(11.58, 57.83, -50.82), sigsquare*(1/2)*diag(3)) 
+}
+
+
+x <- cbind(1, Japandata$time)
+x <- cbind(x, Japandata$time^2)
+y <- list()
+
+  for(j in 1:nrow(thet)){
+    y[[j]] <- x%*%thet[j,]
+  }
+ 
+plot(Japandata$time,y[[1]],type = "l", ylim = c(10, 40), xlab = "Time",
+     ylab = "Temp", main = "Regression curves from the draws of prior distribution")
+for( i in 2:100){
+  lines(Japandata$time,y[[i]])
+}
+points(Japandata$time, Japandata$temp, col ="orange")
+
+```
+
+From the plot, looking at the shape of the curves, it can be seen that our prior seems to be sensible.
+
+Then we write a program to simulate from the joint posterior distribution of the parameters and using 100 draws obtained the parameters and then we plot the regression curves resulting from these draws.
+
+```{r,echo=FALSE}
+
+bzero <- c(11.58, 57.83, -50.82)
+betamle <- solve( t(x) %*% x) %*% t(x) %*% as.matrix(Japandata$temp)
+bn <- solve(t(x)%*%x + 2*diag(3))%*% (t(x)%*%x%*% betamle + 2*diag(3) %*% bzero)
+
+
+vn <- 365 + 50
+snsquare <- (50*25 + t(Japandata$temp)%*%Japandata$temp + bzero%*%(2*diag(3))%*% bzero -
+  t(bn)%*%(2*diag(3))%*%bn) / vn
+
+omegan <- t(x)%*%x + 2*diag(3)
+
+thet1 <- matrix(ncol = 3, nrow = 100)
+for(i in 1:100){
+  X <- rchisq(1, vn)
+  sigsquare <- (vn *snsquare) / X
+  thet1[i, ] <- mvrnorm(1, t(bn), as.numeric(sigsquare)*solve(omegan) )
+}
+
+
+y1 <- list()
+
+for(j in 1:nrow(thet1)){
+  y1[[j]] <- x%*%thet1[j,]
+}
+
+plot(Japandata$time,y1[[1]],type = "l", ylim = c(10, 40), xlab = "Time",
+     ylab = "Temp", main = "Regression curves from the draws of posterior distribution")
+for( i in 2:100){
+  lines(Japandata$time,y1[[i]])
+}
+points(Japandata$time, Japandata$temp, col ="orange")
+```
+
+We can see that the posterior is less spread out so it can be said that we have a better fit.
+
+Using the values simulated previously we want to simulate from the posterior distribution of the day with the highest temperature. We plot it with an histogram:
+
+```{r,echo=FALSE}
+xtildes <- -thet1[,2] / (2 * thet1[,3])
+
+pickthisday <-c()
+
+vect <- 1:365 /365
+for(i in 1:100){
+  pickthisday[i] <- which.min(abs(vect-xtildes[i]))
+}
+hist(pickthisday,breaks = 365, xlim =c(0,365),
+     main = "Distribution of hottest expected day of year")
+```
+
+It can be seen that the hottest day is around day 200 that is in July, and all the other high values are in the summer period.
+
+As for eliminating the higher order variables in the polynomial model, we suggest a Laplace prior, since then many $\beta_k$ are close to zero, a situation reminiscent of the LASSO variable selection method.
+
