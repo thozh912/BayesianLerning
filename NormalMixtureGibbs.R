@@ -69,14 +69,14 @@ xGridMin <- min(xGrid)
 xGridMax <- max(xGrid)
 mixDensMean <- rep(0,length(xGrid))
 effIterCount <- 0
-ylim <- c(0,2*max(hist(x)$density))
+ylim <- c(0,2*max(hi$density))
 
 
 for (k in 1:nIter){
-  message(paste('Iteration number:',k))
+  #message(paste('Iteration number:',k))
   alloc <- S2alloc(S) # Just a function that converts between different representations of the group allocations
   nAlloc <- colSums(S)
-  print(nAlloc)
+  #print(nAlloc)
   # Update components probabilities
   w <- rDirichlet(alpha + nAlloc)
   
@@ -105,9 +105,9 @@ for (k in 1:nIter){
   }
   
   # Printing the fitted density against data histogram
-  if (plotFit && (k%%1 ==0)){
+  if (plotFit && (k%%1 ==0) && k == 120){
     effIterCount <- effIterCount + 1
-    hist(x, breaks = 20, freq = FALSE, xlim = c(xGridMin,xGridMax), main = paste("Iteration number",k), ylim = ylim)
+    hist(x, breaks = 20, freq = FALSE, xlim = c(xGridMin,xGridMax), main = "Final iteration", ylim = ylim)
     mixDens <- rep(0,length(xGrid))
     components <- c()
     for (j in 1:nComp){
