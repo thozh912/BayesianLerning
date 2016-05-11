@@ -4,21 +4,22 @@
 ##########    BEGIN USER INPUT #################
 # Data options
 data(faithful)
-rawData <- faithful
-x <- as.matrix(rawData['eruptions'])
+rawData  <- read.table(file = "https://raw.githubusercontent.com/STIMALiU/BayesLearnCourse/master/Labs/rainfall.dat")
+x <- as.matrix(rawData)
 
+j <- NULL
 # Model options
-nComp <- 4    # Number of mixture components
+nComp <- 2    # Number of mixture components
 
 # Prior options
 alpha <- 10*rep(1,nComp) # Dirichlet(alpha)
-muPrior <- rep(0,nComp) # Prior mean of theta
-tau2Prior <- rep(10,nComp) # Prior std theta
+muPrior <- rep(30,nComp) # Prior mean of theta
+tau2Prior <- rep(300,nComp) # Prior std theta
 sigma2_0 <- rep(var(x),nComp) # s20 (best guess of sigma2)
 nu0 <- rep(4,nComp) # degrees of freedom for prior on sigma2
 
 # MCMC options
-nIter <- 1000 # Number of Gibbs sampling draws
+nIter <- 100 # Number of Gibbs sampling draws
 
 # Plotting options
 plotFit <- TRUE
@@ -55,9 +56,12 @@ S2alloc <- function(S){
 # Initial value for the MCMC
 nObs <- length(x)
 S <- t(rmultinom(nObs, size = 1 , prob = rep(1/nComp,nComp))) # nObs-by-nComp matrix with component allocations.
-theta <- quantile(x, probs = seq(0,1,length = nComp))
-sigma2 <- rep(var(x),nComp)
-probObsInComp <- rep(NA, nComp)
+theta <- vector("list",100)
+theta[[1]] <- quantile(x, probs = seq(0,1,length = nComp))
+sigma2 <-vector("list",100)
+sigma2[[1]] <- rep(var(x),nComp)
+probObsInComp <- vector("list",100)
+probObsInComp[[1]] <- rep(NA, nComp)
 
 # Setting up the plot
 xGrid <- seq(min(x)-1*apply(x,2,sd),max(x)+1*apply(x,2,sd),length = 100)
@@ -79,25 +83,25 @@ for (k in 1:nIter){
   # Update theta's
   for (j in 1:nComp){
     precPrior <- 1/tau2Prior[j]
-    precData <- nAlloc[j]/sigma2[j]
+    precData <- nAlloc[j]/sigma2[[k]][[j]]
     precPost <- precPrior + precData
     wPrior <- precPrior/precPost
     muPost <- wPrior*muPrior + (1-wPrior)*mean(x[alloc == j])
     tau2Post <- 1/precPost
-    theta[j] <- rnorm(1, mean = muPost, sd = sqrt(tau2Post))
+    theta[[k+1]][[j]] <- rnorm(1, mean = muPost, sd = sqrt(tau2Post))
   }
   
   # Update sigma2's
   for (j in 1:nComp){
-    sigma2[j] <- rScaledInvChi2(1, df = nu0[j] + nAlloc[j], scale = (nu0[j]*sigma2_0[j] + sum((x[alloc == j] - theta[j])^2))/(nu0[j] + nAlloc[j]))
+    sigma2[[k+1]][[j]] <- rScaledInvChi2(1, df = nu0[j] + nAlloc[j], scale = (nu0[j]*sigma2_0[j] + sum((x[alloc == j] - theta[[k+1]][[j]])^2))/(nu0[j] + nAlloc[j]))
   }
   
   # Update allocation
   for (i in 1:nObs){
     for (j in 1:nComp){
-      probObsInComp[j] <- w[j]*dnorm(x[i], mean = theta[j], sd = sqrt(sigma2[j]))
+      probObsInComp[[k]][j] <- w[j]*dnorm(x[i], mean = theta[[k]][[j]], sd = sqrt(sigma2[[k]][[j]]))
     }
-    S[i,] <- t(rmultinom(1, size = 1 , prob = probObsInComp/sum(probObsInComp)))
+    S[i,] <- t(rmultinom(1, size = 1 , prob = probObsInComp[[k]]/sum(probObsInComp[[k]])))
   }
   
   # Printing the fitted density against data histogram
@@ -107,7 +111,7 @@ for (k in 1:nIter){
     mixDens <- rep(0,length(xGrid))
     components <- c()
     for (j in 1:nComp){
-      compDens <- dnorm(xGrid,theta[j],sd = sqrt(sigma2[j]))
+      compDens <- dnorm(xGrid,theta[[k]][[j]],sd = sqrt(sigma2[[k]][[j]]))
       mixDens <- mixDens + w[j]*compDens
       lines(xGrid, compDens, type = "l", lwd = 2, col = lineColors[j])
       components[j] <- paste("Component ",j)
@@ -129,3 +133,20 @@ legend("topright", box.lty = 1, legend = c("Data histogram","Mixture density","N
 
 #########################    Helper functions    ##############################################
 
+theta1 <- c()
+for(i in 1:100){
+  theta1[i] <- theta[[i]][[1]]
+}
+plot(theta1,type="l")
+
+theta2 <- c()
+for(i in 1:100){
+  theta2[i] <- theta[[i]][[2]]
+}
+plot(theta2,type="l")
+
+probObsInComp1 <- c()
+for(i in 1:99){
+  probObsInComp1[i] <- probObsInComp1[[i]][[1]]
+}
+plot(probObsInComp1,type ="l")
