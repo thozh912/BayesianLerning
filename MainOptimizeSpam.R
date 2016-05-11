@@ -13,7 +13,7 @@ tau <- 10; # Prior scaling factor such that Prior Covariance = (tau^2)*I
 
 # install.packages("mvtnorm") # Loading a package that contains the multivariate normal pdf
 library("mvtnorm") # This command reads the mvtnorm package into R's memory. NOW we can use dmvnorm function.
-
+library(msm)
 # Loading data from file
 Data<-read.table("SpamReduced.dat",header=TRUE)  # Spam data from Hastie et al.
 y <- as.vector(Data[,1]); # Data from the read.table function is a data frame. Let's convert y and X to vector and matrix.
@@ -77,6 +77,7 @@ print(OptimResults$par)
 print('The approximate posterior standard deviation is:')
 approxPostStd <- sqrt(diag(-solve(OptimResults$hessian)))
 print(approxPostStd)
+drawnbetaposterior <- rmvnorm(1, mean = OptimResults$par, sigma = solve(-OptimResults$hessian))
 
 betanow <- rmvnorm(1, sigma = 100 * diag(16))
 betanow <- as.vector(betanow)
@@ -109,7 +110,7 @@ for(i in 1:length(y)){
   if(pnorm(X[i,] %*% betanows[dim(betanows)[1],]) >= 0.5){
     spamindicators[i,2] <- 1    
   }
-  if(pnorm(X[i,] %*% OptimResults$par) >= 0.5){
+  if(pnorm(X[i,] %*% as.vector(drawnbetaposterior)) >= 0.5){
     spamindicators[i,1] <- 1    
   } 
 }
