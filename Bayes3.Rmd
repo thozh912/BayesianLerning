@@ -98,7 +98,7 @@ legend("topright", box.lty = 1, legend = c("Data histogram",'Normal Model'),
 Using mixture normal model, here we present the plot for the last iteration with the two components. 
 
 ```{r, echo=FALSE}
-
+x <- as.matrix(raindata['V1'])
 
 j <- NULL
 # Model options
@@ -149,11 +149,11 @@ S2alloc <- function(S){
 # Initial value for the MCMC
 nObs <- length(x)
 S <- t(rmultinom(nObs, size = 1 , prob = rep(1/nComp,nComp))) # nObs-by-nComp matrix with component allocations.
-theta <- vector("list", 120)
+theta <- vector("list", 1000)
 theta[[1]] <- quantile(x, probs = seq(0,1,length = nComp))
-sigma2 <- vector("list", 120)
+sigma2 <- vector("list", 1000)
 sigma2[[1]] <- rep(var(x),nComp)
-probObsInComp <- vector("list", 120)
+probObsInComp <- vector("list", 1000)
 probObsInComp[[1]] <- rep(NA, nComp)
 
 # Setting up the plot
@@ -192,15 +192,15 @@ for (k in 1:nIter){
   # Update allocation
   for (i in 1:nObs){
     for (j in 1:nComp){
-      probObsInComp[[k]][[j]] <- w[j]*dnorm(x[i], mean = theta[[k]][[j]], sd = sqrt(sigma2[[k]][[j]]))
+      probObsInComp[[k]][j] <- w[j]*dnorm(x[i], mean = theta[[k]][[j]], sd = sqrt(sigma2[[k]][[j]]))
     }
     S[i,] <- t(rmultinom(1, size = 1 , prob = probObsInComp[[k]]/sum(probObsInComp[[k]])))
   }
   
   # Printing the fitted density against data histogram
-  if (plotFit && (k%%1 ==0) && k == 120){
+  if (plotFit && (k == 120)){
     effIterCount <- effIterCount + 1
-    hist(x, breaks = 20, freq = FALSE, xlim = c(xGridMin,xGridMax), main = "Final iteration", ylim = ylim)
+    hist(x, breaks = 20, freq = FALSE, xlim = c(xGridMin,xGridMax), main = paste("Iteration number",k), ylim = ylim)
     mixDens <- rep(0,length(xGrid))
     components <- c()
     for (j in 1:nComp){
@@ -216,11 +216,13 @@ for (k in 1:nIter){
            col = c("black",lineColors[1:nComp], 'red'), lwd = 2)
     Sys.sleep(sleepTime)
   }
+  
 }
+
   
 ```
 
-Let check the convergence of all the parameters.
+Let check the convergence and the efficiency of all the parameters.
 
 Traceplot, ACF and inefficiency factor of $\mu_1$:
 
@@ -232,8 +234,10 @@ for(i in 1:120){
 }
 plot(theta1, type ="l", ylim = c(0, 90), main = "Traceplot of theta1")
 t1ac <- acf(theta1[30:120], main = "ACF")
-(sum(t1ac$acf[2:19])*2)+1 #the IF
+paste("IF: ",(sum(t1ac$acf[2:19])*2)+1) #the IF
 ```
+
+$\mu_1$ seems to converge to a value around 20 but the draws seem to be highly positively correlated, which leads to a high IF, which means that the number of equivalent independent draws is merely a fraction of the actual draws.
 
 Traceplot, ACF and inefficiency factor of $\mu_2$:
 
@@ -244,9 +248,12 @@ for(i in 1:120){
   theta2[i] <- theta[[i]][[2]]
 }
 plot(theta2, type = "l", main = "Traceplot of theta2")
-ac <- acf(theta2, main = "ACF")
-(sum(ac$acf[2:20])*2)+1 #the IF
+ac <- acf(theta2[40:120], main = "ACF")
+paste("IF: ",(sum(ac$acf[2:20])*2)+1) #the IF
 ```
+
+$\mu_2$ seems to converge to a value around 100 but the draws seem to be positively correlated with draws an even number of lags apart.
+The IF number is rather large here as well.
 
 Traceplot, ACF and inefficiency factor of $\sigma^2_1$:
 
@@ -256,9 +263,11 @@ for(i in 1:120){
   sigma1[i] <- sigma2[[i]][[1]]
 }
 plot(sigma1, type ="l", main = "Traceplot of sigma1")
-sig1 <- acf(sigma1, main = "ACF")
+sig1 <- acf(sigma1[20:120], main = "ACF")
 (sum(sig1$acf[2:20])*2)+1 #the IF
 ```
+
+$\sigma^2_1$ converges to a value close to 90, the draws seem to be highly positively correlated, which leads to a high IF, which means that the number of equivalent independent draws is merely a fraction of the actual draws.
 
 Traceplot, ACF and inefficiency factor of $\sigma^2_2$:
 
@@ -268,9 +277,11 @@ for(i in 1:120){
   sigmaSecond[i] <- sigma2[[i]][[2]]
 }
 plot(sigmaSecond, type = "l", main = "Traceplot of sigma2")
-sig2 <- acf(sigmaSecond, main = "ACF")
+sig2 <- acf(sigmaSecond[20:120], main = "ACF")
 (sum(sig2$acf[2:20])*2)+1 #the IF
 ```
+
+$\sigma^2_2$ converges to a value close to 2100, the comment for the ACF and IF of $\sigma^2_1$ are true also in this case.
 
 Traceplot, ACF and inefficiency factor of $\pi_1$:
 
@@ -280,9 +291,11 @@ for(i in 1:120){
   probObsInComp1[i] <- probObsInComp[[i]][[1]]
 }
 plot(probObsInComp1, type ="l", main = "Traceplot of pi1")
-p1 <- acf(probObsInComp1, main = "ACF")
+p1 <- acf(probObsInComp1[20:120], main = "ACF")
 (sum(p1$acf[2:20])*2)+1 #the IF
 ```
+
+$\pi_1$ converges to a value that is virtually zero and apart for the first 4 lags the draws seems to be independent.
 
 Traceplot, ACF and inefficiency factor of $\pi_2$:
 
@@ -292,11 +305,11 @@ for(i in 1:120){
   probObsInComp2[i] <- probObsInComp[[i]][[2]]
 }
 plot(probObsInComp2, type="l", main = "Traceplot of pi2")
-p2 <- acf(probObsInComp2, main = "ACF")
-(sum(p2$acf[2:20])*2)+1 #the IF
+p2 <- acf(probObsInComp2[50:120], main = "ACF")
+(sum(p2$acf[2:18])*2)+1 #the IF
 ```
 
-
+Also $\pi_2$ converges to a value close to zero, but in this case from the ACF and IF we can see that the draws seem to be highly positively correlated.
 
 #1.c
 Histogram of the data with the model in 1.a and 1.b using the posterior mean values for all the parameters:
@@ -312,6 +325,9 @@ legend("topright", box.lty = 1, legend = c("Data histogram","Mixture density","N
 The mixture of normal models seems to be the best in terms of fitting.
 
 ##Assignment 2
+
+
+We are going to use a gibbs sampler to find the regression coefficients to be used in the probit regression model and then compare the performance of the regression coefficients $\beta$ to regression coefficients drawn from $\mathcal{N}(\tilde{\beta},J^{-1})$.
 
 ```{r, echo=FALSE, warning=FALSE}
 ###########   BEGIN USER INPUTS   ################
@@ -400,10 +416,10 @@ drawnbetaposterior <- rmvnorm(1, mean = OptimResults$par, sigma = solve(-OptimRe
 
 betanow <- rmvnorm(1, sigma = 100 * diag(16))
 betanow <- as.vector(betanow)
-betanows <- matrix(0,nrow = 100, ncol = 16)
+betanows <- matrix(0,nrow = 300, ncol = 16)
 betanows[1,] <- betanow
 j <- 2
-while(j <  101){
+while(j <  301){
   ueyes <- matrix(0, nrow = 1,ncol = length(y))
   for( i in 1:length(y)){
     if(y[i] == 0){
@@ -434,7 +450,7 @@ for(i in 1:length(y)){
   } 
 }
 
-paste("Classification rate for posterior mode coefficients: ",
+paste("Classification rate for coefficients drawn from posterior mode normal dist.: ",
       signif(100 * sum(y == spamindicators[,1]) /length(y),3), "%")
 paste("Classification rate for gibbs sampler coefficients: ",
       signif(100 * sum(y == spamindicators[,2]) /length(y),3), "%")
@@ -442,5 +458,5 @@ paste("Classification rate for gibbs sampler coefficients: ",
 
 ```
 
-
+We see that the plot shows that the gibbs sampler does make the regression coefficients converge to relatively small magnitudes after initially diverging from zero. We also see that the classification performance of the gibbs sampler coefficients is as good as the one obtained from coefficients found from the posterior mode normal distribution.
 
