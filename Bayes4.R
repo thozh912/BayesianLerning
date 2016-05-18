@@ -79,4 +79,5 @@ predictresult <- withoutburnins %*% newX
 predictpoissonpar <- exp(predictresult)
 predictprob <- ppois(0.5,lambda = predictpoissonpar)
 finalres <- mean(predictprob)
-finalres
+paste("Mean probability for no bids on the new auction:",finalres)
+
