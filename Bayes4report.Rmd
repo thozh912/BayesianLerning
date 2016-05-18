@@ -1,0 +1,73 @@
+---
+title: "Computer Lab 4"
+author: "Andrea Bruzzone, Thomas Zhang"
+date: "2016 M05 18"
+output: pdf_document
+---
+
+## Assignment 1
+
+### a,
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+library(stats)
+library(mvtnorm)
+library(coda)
+ebaydata <- read.table("eBayNumberOfBidderData.dat", header = TRUE)
+head(ebaydata)
+ebaydata <- ebaydata[,-2]
+glmresult <- glm(nBids ~.-1 ,  family = "poisson", ebaydata)
+summary(glmresult)
+
+#It looks like VerifyID, Sealed, MajBlem, LogBook and MinBidShare
+#are significant predictors in this model.
+
+
+paste("The maximum liklihood estimator of beta coefficients:")
+glmresult$coefficients
+```
+
+
+```{r,echo=FALSE}
+
+```
+
+ 
+
+```{r,echo=FALSE}
+
+```
+
+### b,
+
+
+```{r,echo=FALSE}
+
+```
+
+
+
+```{r,echo=FALSE}
+
+```
+
+
+
+```{r,echo=FALSE}
+
+```
+
+
+
+```{r,echo=FALSE}
+
+```
+
+
+
+```{r,echo=FALSE}
+
+```
+
+### c,
+

@@ -1,5 +1,6 @@
 library(stats)
 library(mvtnorm)
+library(coda)
 ebaydata <- read.table("eBayNumberOfBidderData.dat", header = TRUE)
 head(ebaydata)
 ebaydata <- ebaydata[,-2]
@@ -54,6 +55,28 @@ outerfunc <- function(propdensity,c,innerfunc,...){
 prior <- list(betatilde, solve(Jay)) 
 c <- 2.4/sqrt(8)
 
+mhresult <- outerfunc(prior,c,LogPostPoisson,
+                      y = ebaydata$nBids , X = ebaydata[,-1])
 
+par(mfrow = c(2,2))
+for(i in 1:dim(mhresult)[2]){
+  plot(mhresult[,i],type="l",col=i,
+       ylab = c("beta coef. no: ",i),xlab = "iteration")
+}
+effsizes <- effectiveSize(as.mcmc(mhresult))
+
+burnins <- mhresult[1:1000,]
+withoutburnins <- mhresult[1001:dim(mhresult)[1],]
+phis <- exp(withoutburnins)
+for(i in 1:dim(mhresult)[2]){
+  hist(phis[,i], breaks = 100,col=i, main = c("Posterior dist. of phi coef. no: ",i),
+       xlab = "phi value",border = "white")
+}
 
 newX <- c(1, 1, 1, 0, 0, 0, 1, 0.5)
+
+predictresult <- withoutburnins %*% newX
+predictpoissonpar <- exp(predictresult)
+predictprob <- ppois(0.5,lambda = predictpoissonpar)
+finalres <- mean(predictprob)
+finalres
