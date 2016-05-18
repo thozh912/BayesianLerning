@@ -53,3 +53,7 @@ outerfunc <- function(propdensity,c,innerfunc,...){
 
 prior <- list(betatilde, solve(Jay)) 
 c <- 2.4/sqrt(8)
+
+
+
+newX <- c(1, 1, 1, 0, 0, 0, 1, 0.5)
