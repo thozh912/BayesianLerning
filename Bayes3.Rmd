@@ -440,6 +440,37 @@ for(i in 2:16){
   lines(betanows[,i],col=i)
 }
 
+
+
+
+```
+
+We see that the plot shows that the gibbs sampler make the regression coefficients converge to relatively small magnitudes after initially diverging from zero. We take the burn-in period to be the first 2000 iterations and make marginal posterior distribution histograms of the beta coefficients generated after the burn-in. 
+
+```{r,echo = FALSE}
+par(mfrow = c(2,2))
+for(i in 1:16){
+  hist(betanows[2001:10000,i],col=i, border = "white",breaks = 50,
+       main = c("Histogram for beta coefficient no.",i),
+       xlab = "beta coefficient value", ylab = "number of sample draws")
+}
+```
+
+It can be seen that most of the beta coefficients have reached a stationary posterior mode value and have normal marginal posterior distributions around their posterior modes. A quick check on trceplot of beta coefficient no. 13 reveals that it is still climbing slowly towards more posivive values by iteration 10000, hence the uniform-distribution looking histogram.
+
+Let us look and compare the point estimates of $\beta$ from 2.a and 2.c:
+
+```{r,echo=FALSE}
+options(scipen = -10)
+paste("Point estimate from 2.a:")
+as.vector(drawnbetaposterior)
+paste("Point estimate from 2.c:")
+betanows[dim(betanows)[1],]
+```
+
+It is seen that the two point estimates are very similar.
+
+```{r,echo= FALSE}
 spamindicators <- matrix(0,nrow = length(y),ncol = 2)
 for(i in 1:length(y)){
   if(pnorm(X[i,] %*% betanows[dim(betanows)[1],]) >= 0.5){
@@ -454,9 +485,6 @@ paste("Classification rate for coefficients drawn from posterior mode normal dis
       signif(100 * sum(y == spamindicators[,1]) /length(y),3), "%")
 paste("Classification rate for gibbs sampler coefficients: ",
       signif(100 * sum(y == spamindicators[,2]) /length(y),3), "%")
-
-
 ```
 
-We see that the plot shows that the gibbs sampler does make the regression coefficients converge to relatively small magnitudes after initially diverging from zero. We also see that the classification performance of the gibbs sampler coefficients is as good as the one obtained from coefficients found from the posterior mode normal distribution.
-
+We also see that the classification performance of the gibbs sampler coefficients is as good as the one obtained from coefficients found from the posterior mode normal distribution.

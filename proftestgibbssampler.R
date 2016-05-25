@@ -4,6 +4,9 @@
 # Script to illustrate numerical maximization of the Logistic or Probit regression
 ###################################################################################
 
+
+
+
 ###########   BEGIN USER INPUTS   ################
 Probit <- 1 # If Probit <-0, then logistic model is used.
 chooseCov <- c(1:16) # Here we choose which covariates to include in the model
@@ -13,7 +16,7 @@ tau <- 10; # Prior scaling factor such that Prior Covariance = (tau^2)*I
 
 # install.packages("mvtnorm") # Loading a package that contains the multivariate normal pdf
 library("mvtnorm") # This command reads the mvtnorm package into R's memory. NOW we can use dmvnorm function.
-library(TruncatedNormal)
+
 library("msm")
 
 # Loading data from file
@@ -36,7 +39,7 @@ Sigma <- tau^2*diag(nPara);
 LogPostLogistic <- function(betaVect,y,X,mu,Sigma){
   nPara <- length(betaVect);
   linPred <- X%*%betaVect;
-                                      
+  
   logLik <- sum( linPred*y -log(1 + exp(linPred)));
   if (abs(logLik) == Inf) logLik = -20000; # Likelihood is not finite, stear the optimizer away from here!
   logPrior <- dmvnorm(betaVect, matrix(0,nPara,1), Sigma, log=TRUE);
@@ -46,7 +49,7 @@ LogPostLogistic <- function(betaVect,y,X,mu,Sigma){
 LogPostProbit <- function(betaVect,y,X,mu,Sigma){
   nPara <- length(betaVect);
   linPred <- X%*%betaVect;
-                                      
+  
   # MQ change:
   # instead of logLik <- sum(y*log(pnorm(linPred)) + (1-y)*log(1-pnorm(linPred)) ) type in the equivalent and
   # much more numerically stable; 
@@ -76,7 +79,7 @@ if (Probit==1){
 } else{
   logPost = LogPostLogistic;
 }
-  
+
 OptimResults<-optim(initVal,logPost,gr=NULL,y,X,mu,Sigma,method=c("BFGS"),control=list(fnscale=-1),hessian=TRUE)
 
 # # Printing the results to the screen
@@ -88,6 +91,7 @@ OptimResults<-optim(initVal,logPost,gr=NULL,y,X,mu,Sigma,method=c("BFGS"),contro
 # print('The approximate posterior standard deviation is:')
 # approxPostStd <- sqrt(diag(-solve(OptimResults$hessian)))
 # print(approxPostStd)
+
 customtrandn <- function(mean = 0,sd = 1,l = - Inf , u = Inf){
   X <- trandn((l-mean)/sd,(u-mean)/sd)
   Z <- mean+sd*X
@@ -115,52 +119,3 @@ while(j <  10001){
   betanows[j,] <- betanow
   j <-j + 1
 }
-
-plot(betanows[,1],type="l",ylim = c(-50,50),main = "beta coefficents vs # iterations",
-     xlab = "# iterations", ylab = "beta coefficient values")
-for(i in 2:16){
-  lines(betanows[,i],col=i)
-}
-
-par(mfrow = c(2,2))
-for(i in 1:16){
-  hist(betanows[2001:10000,i],col=i, border = "white",breaks = 50,
-       main = c("Histogram for beta coefficient no.",i),
-       xlab = "beta coefficient value", ylab = "number of sample draws")
-}
-spamindicators <- matrix(0,nrow = length(y),ncol = 2)
-for(i in 1:length(y)){
-  if(pnorm(X[i,] %*% betanows[dim(betanows)[1],]) >= 0.5){
-    spamindicators[i,2] <- 1    
-  }
-  if(pnorm(X[i,] %*% as.vector(drawnbetaposterior)) >= 0.5){
-    spamindicators[i,1] <- 1    
-  } 
-}
-
-paste("Classification rate for posterior mode coefficients: ",
-      signif(100 * sum(y == spamindicators[,1]) /length(y),3), "%")
-paste("Classification rate for gibbs sampler coefficients: ",
-      signif(100 * sum(y == spamindicators[,2]) /length(y),3), "%")
-
-tmp1 <- tempfile()
-tmp2 <- tempfile()
-Rprof(tmp1, interval = 0.05)
-g <-c()
-l <- rep(-Inf,1000)
-u <- rep(5,1000)
-mean <- rep(3,1000)
-sd  <- rep(1,1000)
-g <- customtrandn(mean, sd,l,u)
-
-Rprof(NULL)
-
-Rprof(tmp2, interval = 0.05)
-g <-c()
-for(i in 1:1000){
-  g <- c(g,rtnorm(1, upper  = 5, mean = 3))
-}
-Rprof(NULL)
-
-summaryRprof(tmp1)
-summaryRprof(tmp2)

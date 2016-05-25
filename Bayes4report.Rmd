@@ -74,6 +74,7 @@ outerfunc <- function(propdensity,c,innerfunc,...){
     proposaldraw <- rmvnorm(1, mean = draws[i-1,],sigma = sigma)
     unifdraw <- runif(1)
     alpha <- min(1,exp(innerfunc(t(proposaldraw),...) - innerfunc(draws[i-1,],...)))
+    
     if(unifdraw < alpha){
       draws[i,] <- proposaldraw
     }else{
