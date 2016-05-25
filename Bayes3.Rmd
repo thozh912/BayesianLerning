@@ -333,6 +333,12 @@ The mixture of normal models seems to be the best in terms of fitting.
 We are going to use a gibbs sampler to find the regression coefficients to be used in the probit regression model and then compare the performance of the regression coefficients $\beta$ to regression coefficients drawn from $\mathcal{N}(\tilde{\beta},J^{-1})$.
 
 ```{r, echo=FALSE, warning=FALSE}
+###################################################################################
+# Author: Mattias Villani, Sveriges Riksbank and Stockholm University. 
+#         E-mail: mattias.villani@gmail.se
+# Script to illustrate numerical maximization of the Logistic or Probit regression
+###################################################################################
+
 ###########   BEGIN USER INPUTS   ################
 Probit <- 1 # If Probit <-0, then logistic model is used.
 chooseCov <- c(1:16) # Here we choose which covariates to include in the model
@@ -342,7 +348,9 @@ tau <- 10; # Prior scaling factor such that Prior Covariance = (tau^2)*I
 
 # install.packages("mvtnorm") # Loading a package that contains the multivariate normal pdf
 library("mvtnorm") # This command reads the mvtnorm package into R's memory. NOW we can use dmvnorm function.
+library(TruncatedNormal)
 library("msm")
+
 # Loading data from file
 Data<-read.table("SpamReduced.dat",header=TRUE)  # Spam data from Hastie et al.
 y <- as.vector(Data[,1]); # Data from the read.table function is a data frame. Let's convert y and X to vector and matrix.
@@ -405,7 +413,7 @@ if (Probit==1){
 }
   
 OptimResults<-optim(initVal,logPost,gr=NULL,y,X,mu,Sigma,method=c("BFGS"),control=list(fnscale=-1),hessian=TRUE)
-# 
+
 # # Printing the results to the screen
 # names(OptimResults$par) <- covNames # Naming the coefficient by covariates
 # approxPostStd <- sqrt(diag(-solve(OptimResults$hessian))) # Computing approximate standard deviations.
@@ -415,30 +423,35 @@ OptimResults<-optim(initVal,logPost,gr=NULL,y,X,mu,Sigma,method=c("BFGS"),contro
 # print('The approximate posterior standard deviation is:')
 # approxPostStd <- sqrt(diag(-solve(OptimResults$hessian)))
 # print(approxPostStd)
+customtrandn <- function(mean = 0,sd = 1,l = - Inf , u = Inf){
+  X <- trandn((l-mean)/sd,(u-mean)/sd)
+  Z <- mean+sd*X
+  return(Z)
+}
+customtrandn( mean = 3,1)
+
 drawnbetaposterior <- rmvnorm(1, mean = OptimResults$par, sigma = solve(-OptimResults$hessian))
 
-m <- 10000
+
 betanow <- rmvnorm(1, sigma = 100 * diag(16))
 betanow <- as.vector(betanow)
-betanows <- matrix(0,nrow = m, ncol = 16)
+betanows <- matrix(0,nrow = 10000, ncol = 16)
 betanows[1,] <- betanow
 j <- 2
 
-while(j <  m + 1){
-  ueyes <- matrix(0, nrow = 1,ncol = length(y))
-  for( i in 1:length(y)){
-    if(y[i] == 0){
-      ueyes[i] <- rtnorm(1, mean = X[i,] %*% betanows[j-1,], upper = 0)    
-    } else{
-      ueyes[i] <- rtnorm(1, mean = X[i,] %*% betanows[j-1,], lower = 0)
-    }
-  }
-  ueyes <- as.vector(ueyes)
-  #themvmodel <- as.data.frame(cbind(resp = ueyes, X))
+l <- c(rep(0,1813),rep(-Inf,2788))
+u <- c(rep(Inf,1813),rep(0,2788))
+sd <- rep(1,length(y))
+while(j <  10001){
+  ueyes <- vector( mode = "numeric", length =length(y))
+  mean <- X %*% betanows[j-1,]
+  ueyes <- customtrandn(mean,sd,l,u)
   betanow <- lm(ueyes ~ X - 1)$coef
   betanows[j,] <- betanow
   j <-j + 1
 }
+
+
 plot(betanows[,1],type="l",ylim = c(-50,50),main = "beta coefficents vs # iterations",
      xlab = "# iterations", ylab = "beta coefficient values")
 for(i in 2:16){
