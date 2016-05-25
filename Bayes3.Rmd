@@ -112,12 +112,12 @@ sigma2_0 <- rep(var(x),nComp) # s20 (best guess of sigma2)
 nu0 <- rep(4,nComp) # degrees of freedom for prior on sigma2
 
 # MCMC options
-nIter <- 120 # Number of Gibbs sampling draws
+nIter <- 10000 # Number of Gibbs sampling draws
 
 # Plotting options
-plotFit <- TRUE
+plotFit <- FALSE
 lineColors <- c("blue", "green", "magenta", 'yellow')
-sleepTime <- 0.1 # Adding sleep time between iterations for plotting
+sleepTime <- 0.000001 # Adding sleep time between iterations for plotting
 ################   END USER INPUT ###############
 
 ###### Defining a function that simulates from the 
@@ -149,12 +149,12 @@ S2alloc <- function(S){
 # Initial value for the MCMC
 nObs <- length(x)
 S <- t(rmultinom(nObs, size = 1 , prob = rep(1/nComp,nComp))) # nObs-by-nComp matrix with component allocations.
-theta <- vector("list", 1000)
+theta <- vector("list", nIter)
 theta[[1]] <- quantile(x, probs = seq(0,1,length = nComp))
-sigma2 <- vector("list", 1000)
+sigma2 <- vector("list", nIter)
 sigma2[[1]] <- rep(var(x),nComp)
-probObsInComp <- vector("list", 1000)
-probObsInComp[[1]] <- rep(NA, nComp)
+probObsInComp <- rep(NA, nComp)
+pi <- vector("list", nIter)
 
 # Setting up the plot
 xGrid <- seq(min(x)-1*apply(x,2,sd),max(x)+1*apply(x,2,sd),length = 100)
@@ -172,6 +172,9 @@ for (k in 1:nIter){
   #print(nAlloc)
   # Update components probabilities
   w <- rDirichlet(alpha + nAlloc)
+  for(j in 1:nComp){
+   pi[[k]][[j]] <- w[j,]  
+  }
   
   # Update theta's
   for (j in 1:nComp){
@@ -192,13 +195,13 @@ for (k in 1:nIter){
   # Update allocation
   for (i in 1:nObs){
     for (j in 1:nComp){
-      probObsInComp[[k]][j] <- w[j]*dnorm(x[i], mean = theta[[k]][[j]], sd = sqrt(sigma2[[k]][[j]]))
+      probObsInComp[j] <- w[j]*dnorm(x[i], mean = theta[[k]][[j]], sd = sqrt(sigma2[[k]][[j]]))
     }
-    S[i,] <- t(rmultinom(1, size = 1 , prob = probObsInComp[[k]]/sum(probObsInComp[[k]])))
+    S[i,] <- t(rmultinom(1, size = 1 , prob = probObsInComp/sum(probObsInComp)))
   }
   
   # Printing the fitted density against data histogram
-  if (plotFit && (k == 120)){
+  if (plotFit && k == nIter){
     effIterCount <- effIterCount + 1
     hist(x, breaks = 20, freq = FALSE, xlim = c(xGridMin,xGridMax), main = paste("Iteration number",k), ylim = ylim)
     mixDens <- rep(0,length(xGrid))
@@ -222,101 +225,101 @@ for (k in 1:nIter){
   
 ```
 
-Let check the convergence and the efficiency of all the parameters.
+Let check the convergence and the efficiency of all the parameters, we decide to choose 100 as burnin.
 
 Traceplot, ACF and inefficiency factor of $\mu_1$:
 
 ```{r, echo=FALSE}
 
 theta1 <- c()
-for(i in 1:120){
+for(i in 1:nIter){
  theta1[i] <- theta[[i]][[1]]
 }
-plot(theta1, type ="l", ylim = c(0, 90), main = "Traceplot of theta1")
-t1ac <- acf(theta1[30:120], main = "ACF")
-paste("IF: ",(sum(t1ac$acf[2:19])*2)+1) #the IF
+plot(theta1[100:nIter], type ="l" ,main = "Traceplot of theta1")
+t1ac <- acf(theta1[100:nIter], main = "ACF")
+paste("IF: ",round((sum(t1ac$acf[2:39])*2)+1,2)) #the IF
 ```
 
-$\mu_1$ seems to converge to a value around 20 but the draws seem to be highly positively correlated, which leads to a high IF, which means that the number of equivalent independent draws is merely a fraction of the actual draws.
+$\mu_1$ seems to converge to a value around 11 but the draws seem to be highly positively correlated, which leads to a high IF, which means that the number of equivalent independent draws is merely a fraction of the actual draws.
 
 Traceplot, ACF and inefficiency factor of $\mu_2$:
 
 ```{r, echo=FALSE}
 
 theta2 <- c()
-for(i in 1:120){
+for(i in 1:nIter){
   theta2[i] <- theta[[i]][[2]]
 }
-plot(theta2, type = "l", main = "Traceplot of theta2")
-ac <- acf(theta2[40:120], main = "ACF")
-paste("IF: ",(sum(ac$acf[2:20])*2)+1) #the IF
+plot(theta2[100:nIter], type = "l", main = "Traceplot of theta2")
+ac <- acf(theta2[100:nIter], main = "ACF")
+paste("IF: ",round((sum(ac$acf[2:39])*2)+1, 2)) #the IF
 ```
 
-$\mu_2$ seems to converge to a value around 100 but the draws seem to be positively correlated with draws an even number of lags apart.
+$\mu_2$ seems to converge to a value around 61 but the draws seem to be positively correlated.
 The IF number is rather large here as well.
 
 Traceplot, ACF and inefficiency factor of $\sigma^2_1$:
 
 ```{r, echo=FALSE}
 sigma1 <- c()
-for(i in 1:120){
+for(i in 1:nIter){
   sigma1[i] <- sigma2[[i]][[1]]
 }
-plot(sigma1, type ="l", main = "Traceplot of sigma1")
-sig1 <- acf(sigma1[20:120], main = "ACF")
-(sum(sig1$acf[2:20])*2)+1 #the IF
+plot(sigma1[100:nIter], type ="l", main = "Traceplot of sigma1")
+sig1 <- acf(sigma1[100:nIter], main = "ACF")
+paste("IF: ",round((sum(sig1$acf[2:39])*2)+1,2)) #the IF
 ```
 
-$\sigma^2_1$ converges to a value close to 90, the draws seem to be highly positively correlated, which leads to a high IF, which means that the number of equivalent independent draws is merely a fraction of the actual draws.
+$\sigma^2_1$ converges to a value close to 86, the draws seem to be highly positively correlated, which leads to a high IF, which means that the number of equivalent independent draws is merely a fraction of the actual draws.
 
 Traceplot, ACF and inefficiency factor of $\sigma^2_2$:
 
 ```{r, echo=FALSE}
 sigmaSecond <- c()
-for(i in 1:120){
+for(i in 1:nIter){
   sigmaSecond[i] <- sigma2[[i]][[2]]
 }
-plot(sigmaSecond, type = "l", main = "Traceplot of sigma2")
-sig2 <- acf(sigmaSecond[20:120], main = "ACF")
-(sum(sig2$acf[2:20])*2)+1 #the IF
+plot(sigmaSecond[100:nIter], type = "l", main = "Traceplot of sigma2")
+sig2 <- acf(sigmaSecond[100:nIter], main = "ACF")
+paste("IF: ",round((sum(sig2$acf[2:39])*2)+1,2)) #the IF
 ```
 
-$\sigma^2_2$ converges to a value close to 2100, the comment for the ACF and IF of $\sigma^2_1$ are true also in this case.
+$\sigma^2_2$ converges to a value close to 2100. The draws are not really correlated and the IF value is quite small.
 
 Traceplot, ACF and inefficiency factor of $\pi_1$:
 
 ```{r, echo=FALSE}
-probObsInComp1 <- c()
-for(i in 1:120){
-  probObsInComp1[i] <- probObsInComp[[i]][[1]]
+pi1 <- c()
+for(i in 1:nIter){
+  pi1[i] <- pi[[i]][[1]]
 }
-plot(probObsInComp1, type ="l", main = "Traceplot of pi1")
-p1 <- acf(probObsInComp1[20:120], main = "ACF")
-(sum(p1$acf[2:20])*2)+1 #the IF
+plot(pi1[100:nIter], type ="l", main = "Traceplot of pi1")
+p1 <- acf(pi1[100:nIter], main = "ACF")
+paste("IF: ",round((sum(p1$acf[2:39])*2)+1,2)) #the IF
 ```
 
-$\pi_1$ converges to a value that is virtually zero and apart for the first 4 lags the draws seems to be independent.
+$\pi_1$ converges to a value that is around 0.57 and the draws seems to be highly positively correlated, with a high IF value.
 
 Traceplot, ACF and inefficiency factor of $\pi_2$:
 
 ```{r, echo=FALSE}
-probObsInComp2 <- c()
-for(i in 1:120){
-  probObsInComp2[i] <- probObsInComp[[i]][[2]]
+pi2 <- c()
+for(i in 1:nIter){
+  pi2[i] <- pi[[i]][[2]]
 }
-plot(probObsInComp2, type="l", main = "Traceplot of pi2")
-p2 <- acf(probObsInComp2[50:120], main = "ACF")
-(sum(p2$acf[2:18])*2)+1 #the IF
+plot(pi2[100:nIter], type="l", main = "Traceplot of pi2")
+p2 <- acf(pi2[100:nIter], main = "ACF")
+paste("IF: ",round((sum(p2$acf[2:39])*2)+1,2)) #the IF
 ```
 
-Also $\pi_2$ converges to a value close to zero, but in this case from the ACF and IF we can see that the draws seem to be highly positively correlated.
+Also $\pi_2$ converges to a value around 0.43, but in this case from the ACF and IF we can see that the draws seem to be highly positively correlated.
 
 #1.c
 Histogram of the data with the model in 1.a and 1.b using the posterior mean values for all the parameters:
 
 ```{r, echo=FALSE}
 hist(x, breaks = 20, freq = FALSE, xlim = c(xGridMin,xGridMax), main = "Final fitted density")
-lines(xGrid, mixDensMean, type = "l", lwd = 2, lty = 4, col = "red")
+lines(xGrid, mixDens, type = "l", lwd = 2, lty = 4, col = "red")
 lines(xGrid, ndistr, type = "l", lwd = 2, col = "blue")
 legend("topright", box.lty = 1, legend = c("Data histogram","Mixture density","Normal density"), col=c("black","red","blue"), lwd = 2)
 #the mixture seems to be the best model in terms of fitting
@@ -414,12 +417,14 @@ OptimResults<-optim(initVal,logPost,gr=NULL,y,X,mu,Sigma,method=c("BFGS"),contro
 # print(approxPostStd)
 drawnbetaposterior <- rmvnorm(1, mean = OptimResults$par, sigma = solve(-OptimResults$hessian))
 
+m <- 10000
 betanow <- rmvnorm(1, sigma = 100 * diag(16))
 betanow <- as.vector(betanow)
-betanows <- matrix(0,nrow = 300, ncol = 16)
+betanows <- matrix(0,nrow = m, ncol = 16)
 betanows[1,] <- betanow
 j <- 2
-while(j <  301){
+
+while(j <  m + 1){
   ueyes <- matrix(0, nrow = 1,ncol = length(y))
   for( i in 1:length(y)){
     if(y[i] == 0){
