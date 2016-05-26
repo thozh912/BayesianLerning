@@ -165,7 +165,7 @@ effIterCount <- 0
 ylim <- c(0,2*max(hi$density))
 
 
-for (k in 1:nIter){
+for(k in 1:(nIter - 1 )){
   #message(paste('Iteration number:',k))
   alloc <- S2alloc(S) # Just a function that converts between different representations of the group allocations
   nAlloc <- colSums(S)
@@ -177,7 +177,7 @@ for (k in 1:nIter){
   }
   
   # Update theta's
-  for (j in 1:nComp){
+  for(j in 1:nComp){
     precPrior <- 1/tau2Prior[j]
     precData <- nAlloc[j]/sigma2[[k]][[j]]
     precPost <- precPrior + precData
@@ -188,25 +188,25 @@ for (k in 1:nIter){
   }
   
   # Update sigma2's
-  for (j in 1:nComp){
+  for(j in 1:nComp){
     sigma2[[k+1]][[j]] <- rScaledInvChi2(1, df = nu0[j] + nAlloc[j], scale = (nu0[j]*sigma2_0[j] + sum((x[alloc == j] - theta[[k+1]][[j]])^2))/(nu0[j] + nAlloc[j]))
   }
   
   # Update allocation
-  for (i in 1:nObs){
-    for (j in 1:nComp){
+  for(i in 1:nObs){
+    for(j in 1:nComp){
       probObsInComp[j] <- w[j]*dnorm(x[i], mean = theta[[k]][[j]], sd = sqrt(sigma2[[k]][[j]]))
     }
     S[i,] <- t(rmultinom(1, size = 1 , prob = probObsInComp/sum(probObsInComp)))
   }
   
   # Printing the fitted density against data histogram
-  if (plotFit && k == nIter){
+  if(plotFit && k == (nIter - 1)){
     effIterCount <- effIterCount + 1
     hist(x, breaks = 20, freq = FALSE, xlim = c(xGridMin,xGridMax), main = paste("Iteration number",k), ylim = ylim)
     mixDens <- rep(0,length(xGrid))
     components <- c()
-    for (j in 1:nComp){
+    for(j in 1:nComp){
       compDens <- dnorm(xGrid,theta[[k]][[j]],sd = sqrt(sigma2[[k]][[j]]))
       mixDens <- mixDens + w[j]*compDens
       lines(xGrid, compDens, type = "l", lwd = 2, col = lineColors[j])
@@ -232,11 +232,11 @@ Traceplot, ACF and inefficiency factor of $\mu_1$:
 ```{r, echo=FALSE}
 
 theta1 <- c()
-for(i in 1:nIter){
+for(i in 1:(nIter - 1)){
  theta1[i] <- theta[[i]][[1]]
 }
-plot(theta1[100:nIter], type ="l" ,main = "Traceplot of theta1")
-t1ac <- acf(theta1[100:nIter], main = "ACF")
+plot(theta1[100:(nIter - 1)], type ="l" ,main = "Traceplot of theta1")
+t1ac <- acf(theta1[100:(nIter - 1)], main = "ACF")
 paste("IF: ",round((sum(t1ac$acf[2:39])*2)+1,2)) #the IF
 ```
 
@@ -247,11 +247,11 @@ Traceplot, ACF and inefficiency factor of $\mu_2$:
 ```{r, echo=FALSE}
 
 theta2 <- c()
-for(i in 1:nIter){
+for(i in 1:(nIter - 1)){
   theta2[i] <- theta[[i]][[2]]
 }
-plot(theta2[100:nIter], type = "l", main = "Traceplot of theta2")
-ac <- acf(theta2[100:nIter], main = "ACF")
+plot(theta2[100:(nIter - 1)], type = "l", main = "Traceplot of theta2")
+ac <- acf(theta2[100:(nIter - 1)], main = "ACF")
 paste("IF: ",round((sum(ac$acf[2:39])*2)+1, 2)) #the IF
 ```
 
@@ -262,11 +262,11 @@ Traceplot, ACF and inefficiency factor of $\sigma^2_1$:
 
 ```{r, echo=FALSE}
 sigma1 <- c()
-for(i in 1:nIter){
+for(i in 1:(nIter - 1)){
   sigma1[i] <- sigma2[[i]][[1]]
 }
-plot(sigma1[100:nIter], type ="l", main = "Traceplot of sigma1")
-sig1 <- acf(sigma1[100:nIter], main = "ACF")
+plot(sigma1[100:(nIter - 1)], type ="l", main = "Traceplot of sigma1")
+sig1 <- acf(sigma1[100:(nIter - 1)], main = "ACF")
 paste("IF: ",round((sum(sig1$acf[2:39])*2)+1,2)) #the IF
 ```
 
@@ -276,11 +276,11 @@ Traceplot, ACF and inefficiency factor of $\sigma^2_2$:
 
 ```{r, echo=FALSE}
 sigmaSecond <- c()
-for(i in 1:nIter){
+for(i in 1:(nIter - 1)){
   sigmaSecond[i] <- sigma2[[i]][[2]]
 }
-plot(sigmaSecond[100:nIter], type = "l", main = "Traceplot of sigma2")
-sig2 <- acf(sigmaSecond[100:nIter], main = "ACF")
+plot(sigmaSecond[100:(nIter - 1)], type = "l", main = "Traceplot of sigma2")
+sig2 <- acf(sigmaSecond[100:(nIter - 1)], main = "ACF")
 paste("IF: ",round((sum(sig2$acf[2:39])*2)+1,2)) #the IF
 ```
 
@@ -290,11 +290,11 @@ Traceplot, ACF and inefficiency factor of $\pi_1$:
 
 ```{r, echo=FALSE}
 pi1 <- c()
-for(i in 1:nIter){
+for(i in 1:(nIter-1)){
   pi1[i] <- pi[[i]][[1]]
 }
-plot(pi1[100:nIter], type ="l", main = "Traceplot of pi1")
-p1 <- acf(pi1[100:nIter], main = "ACF")
+plot(pi1[100:(nIter - 1)], type ="l", main = "Traceplot of pi1")
+p1 <- acf(pi1[100:(nIter - 1)], main = "ACF")
 paste("IF: ",round((sum(p1$acf[2:39])*2)+1,2)) #the IF
 ```
 
@@ -304,11 +304,11 @@ Traceplot, ACF and inefficiency factor of $\pi_2$:
 
 ```{r, echo=FALSE}
 pi2 <- c()
-for(i in 1:nIter){
+for(i in 1:(nIter - 1)){
   pi2[i] <- pi[[i]][[2]]
 }
-plot(pi2[100:nIter], type="l", main = "Traceplot of pi2")
-p2 <- acf(pi2[100:nIter], main = "ACF")
+plot(pi2[100:(nIter - 1)], type="l", main = "Traceplot of pi2")
+p2 <- acf(pi2[100:(nIter - 1)], main = "ACF")
 paste("IF: ",round((sum(p2$acf[2:39])*2)+1,2)) #the IF
 ```
 
@@ -319,7 +319,7 @@ Histogram of the data with the model in 1.a and 1.b using the posterior mean val
 
 ```{r, echo=FALSE}
 hist(x, breaks = 20, freq = FALSE, xlim = c(xGridMin,xGridMax), main = "Final fitted density")
-lines(xGrid, mixDens, type = "l", lwd = 2, lty = 4, col = "red")
+lines(xGrid, mixDensMean, type = "l", lwd = 2, lty = 4, col = "red")
 lines(xGrid, ndistr, type = "l", lwd = 2, col = "blue")
 legend("topright", box.lty = 1, legend = c("Data histogram","Mixture density","Normal density"), col=c("black","red","blue"), lwd = 2)
 #the mixture seems to be the best model in terms of fitting
@@ -332,7 +332,7 @@ The mixture of normal models seems to be the best in terms of fitting.
 
 We are going to use a gibbs sampler to find the regression coefficients to be used in the probit regression model and then compare the performance of the regression coefficients $\beta$ to regression coefficients drawn from $\mathcal{N}(\tilde{\beta},J^{-1})$.
 
-```{r, echo=FALSE, warning=FALSE}
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
 ###################################################################################
 # Author: Mattias Villani, Sveriges Riksbank and Stockholm University. 
 #         E-mail: mattias.villani@gmail.se
@@ -428,7 +428,7 @@ customtrandn <- function(mean = 0,sd = 1,l = - Inf , u = Inf){
   Z <- mean+sd*X
   return(Z)
 }
-customtrandn( mean = 3,1)
+
 
 drawnbetaposterior <- rmvnorm(1, mean = OptimResults$par, sigma = solve(-OptimResults$hessian))
 
