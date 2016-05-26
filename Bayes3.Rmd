@@ -474,7 +474,7 @@ for(i in 1:16){
 }
 ```
 
-It can be seen that most of the beta coefficients have reached a stationary posterior mode value and have normal marginal posterior distributions around their posterior modes. A quick check on trceplot of beta coefficient no. 13 reveals that it is still climbing slowly towards more posivive values by iteration 10000, hence the uniform-distribution looking histogram.
+It can be seen that most of the beta coefficients have reached a stationary posterior mode value and have normal marginal posterior distributions around their posterior modes. A quick check on traceplot of beta coefficient no. 13 reveals that it is still climbing slowly towards more positive values by iteration 10000, hence the uniform-distribution looking histogram.
 
 Let us look and compare the point estimates of $\beta$ from 2.a and 2.c:
 
@@ -484,6 +484,7 @@ paste("Point estimate from 2.a:")
 as.vector(drawnbetaposterior)
 paste("Point estimate from 2.c:")
 betanows[dim(betanows)[1],]
+options(scipen = 2)
 ```
 
 It is seen that the two point estimates are very similar.
