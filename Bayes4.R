@@ -2,9 +2,9 @@ library(stats)
 library(mvtnorm)
 library(coda)
 ebaydata <- read.table("eBayNumberOfBidderData.dat", header = TRUE)
-head(ebaydata)
+#head(ebaydata)
 ebaydata <- ebaydata[,-2]
-glmresult <- glm(nBids ~.-1 ,  family = "poisson", ebaydata)
+glmresult <- glm(nBids ~. ,  family = "poisson", ebaydata)
 summary(glmresult)
 
 #It looks like VerifyID, Sealed, MajBlem, LogBook and MinBidShare
@@ -18,12 +18,13 @@ LogPostPoisson <- function(betaVect,y,X){
   nPara <- length(betaVect)
   linPred <- X%*% betaVect
   Loglik <- sum( y * linPred  - exp(linPred))
-  Logprior <- dmvnorm(t(betaVect), rep(0,8), 
+  Logprior <- dmvnorm(t(betaVect), rep(0,9), 
                       sigma = 100 * solve( t(X)%*%X ), log=TRUE)
   return(Loglik + Logprior)
 }
 
-initVal <- rep(0,8)
+ebaydata <- read.table("eBayNumberOfBidderData.dat", header = TRUE)
+initVal <- rep(0,9)
 OptimResults<-optim(initVal,LogPostPoisson,gr=NULL,
                     y = ebaydata$nBids,X = ebaydata[,-1],method=c("BFGS"),
                     control=list(fnscale=-1),hessian=TRUE)
